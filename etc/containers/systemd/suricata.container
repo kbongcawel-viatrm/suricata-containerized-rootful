@@ -1,0 +1,30 @@
+[Unit]
+Description=Suricata NFQUEUE Intrusion Detection System
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=suricata
+Image=docker.io/jasonish/suricata:latest
+
+Network=host
+
+AddCapability=NET_ADMIN
+AddCapability=NET_RAW
+AddCapability=SYS_NICE
+
+Volume=/var/lib/suricata-ids/config:/etc/suricata/custom:ro,Z
+Volume=/var/lib/suricata-ids/rules:/etc/suricata/rules:ro,Z
+Volume=suricata-logs.volume:/var/log/suricata
+
+Exec=-c /etc/suricata/custom/suricata.yaml -q 0 -l /var/log/suricata
+
+NoNewPrivileges=true
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+

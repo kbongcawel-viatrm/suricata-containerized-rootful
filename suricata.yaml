@@ -1,0 +1,54 @@
+
+%YAML 1.1
+---
+
+vars:
+  address-groups:
+    HOME_NET: "[10.0.0.0/8,172.16.0.0/12,192.168.0.0/16]"
+    EXTERNAL_NET: "!$HOME_NET"
+
+default-rule-path: /etc/suricata/rules
+
+rule-files:
+  - suricata.rules
+  - local.rules
+  - urlhaus.rules
+
+nfq:
+  mode: accept
+
+default-log-dir: /var/log/suricata
+
+stats:
+  enabled: yes
+  interval: 60
+
+outputs:
+  - fast:
+      enabled: yes
+      filename: fast.log
+      append: yes
+
+  - eve-log:
+      enabled: yes
+      filetype: regular
+      filename: eve.json
+      community-id: true
+      types:
+        - alert:
+            tagged-packets: yes
+        - dns
+        - http
+        - tls
+        - flow
+        - stats
+
+logging:
+  default-log-level: info
+  outputs:
+    - console:
+        enabled: yes
+    - file:
+        enabled: yes
+        filename: suricata.log
+
