@@ -6,6 +6,33 @@ vars:
   address-groups:
     HOME_NET: "[10.0.0.0/8,172.16.0.0/12,192.168.0.0/16]"
     EXTERNAL_NET: "!$HOME_NET"
+    
+    HTTP_SERVERS: "$HOME_NET"
+    SMTP_SERVERS: "$HOME_NET"
+    SQL_SERVERS: "$HOME_NET"
+    DNS_SERVERS: "$HOME_NET"
+    TELNET_SERVERS: "$HOME_NET"
+    AIM_SERVERS: "$EXTERNAL_NET"
+    DC_SERVERS: "$HOME_NET"
+    DNP3_SERVER: "$HOME_NET"
+    DNP3_CLIENT: "$HOME_NET"
+    MODBUS_CLIENT: "$HOME_NET"
+    MODBUS_SERVER: "$HOME_NET"
+    ENIP_CLIENT: "$HOME_NET"
+    ENIP_SERVER: "$HOME_NET"
+
+  port-groups:
+    HTTP_PORTS: "80"
+    SHELLCODE_PORTS: "!80"
+    ORACLE_PORTS: 1521
+    SSH_PORTS: 22
+    DNP3_PORTS: 20000
+    MODBUS_PORTS: 502
+    FILE_DATA_PORTS: "[$HTTP_PORTS,110,143]"
+    FTP_PORTS: 21
+    GENEVE_PORTS: 6081
+    VXLAN_PORTS: 4789
+    TEREDO_PORTS: 3544
 
 default-rule-path: /etc/suricata/rules
 
@@ -42,6 +69,45 @@ outputs:
         - tls
         - flow
         - stats
+threading:
+  set-cpu-affinity: no
+  detect-thread-ratio: 0.5
+
+stream:
+  memcap: 256mb
+  checksum-validation: yes
+  inline: auto
+  reassembly:
+    memcap: 256mb
+    depth: 1mb
+    toserver-chunk-size: 2560
+    toclient-chunk-size: 2560
+
+flow:
+  memcap: 128mb
+  hash-size: 32768
+  prealloc: 5000
+
+defrag:
+  memcap: 32mb
+  hash-size: 32768
+  trackers: 32768
+  max-frags: 32768
+  prealloc: yes
+  timeout: 60
+
+host:
+  hash-size: 4096
+  prealloc: 1000
+  memcap: 32mb
+
+detect:
+  profile: low
+  custom-values:
+    toclient-groups: 2
+    toserver-groups: 2
+  sgh-mpm-context: single
+  inspection-recursion-limit: 3000
 
 logging:
   default-log-level: info
