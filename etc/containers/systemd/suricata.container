@@ -17,7 +17,7 @@ Volume=/var/lib/suricata-ids/rules:/etc/suricata/rules:ro,Z
 Volume=suricata-logs.volume:/var/log/suricata
 
 Memory=2g
-PodmanArgs=--cpus=2.0 --memory-reservation=768m --memory-swap=2g
+PodmanArgs=--cpus=1.5 --memory-reservation=768m --memory-swap=2g
 
 Exec=-c /etc/suricata/custom/suricata.yaml -q 0 -l /var/log/suricata
 
