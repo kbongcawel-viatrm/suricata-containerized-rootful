@@ -1,0 +1,37 @@
+[Unit]
+Description=Suricata NFQUEUE Intrusion Detection System
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=suricata
+Image=docker.io/jasonish/suricata:latest
+Network=host
+
+# Hardening: immutable rootfs + drop all default capabilities except NET_ADMIN/NET_RAW
+ReadOnly=true
+Tmpfs=/run:rw,noexec,nosuid,size=64m
+Tmpfs=/tmp:rw,noexec,nosuid,size=64m
+DropCapability=ALL
+AddCapability=NET_ADMIN
+AddCapability=NET_RAW
+NoNewPrivileges=true
+
+# Your existing volumes (suricata-logs.volume stays fully writable)
+Volume=/var/lib/suricata-ids/config:/etc/suricata/custom:ro,Z
+Volume=/var/lib/suricata-ids/rules:/etc/suricata/rules:ro,Z
+Volume=suricata-logs.volume:/var/log/suricata
+
+# Resource limits (bumped --cpus from 1.5 to 3.0 for your 8-thread setup; revert to 1.5 if preferred)
+Memory=2g
+PodmanArgs=--cpus=3.0 --memory-reservation=768m --memory-swap=2g
+
+Exec=-c /etc/suricata/custom/suricata.yaml -q 0 -l /var/log/suricata
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+
