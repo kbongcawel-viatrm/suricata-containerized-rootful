@@ -1,0 +1,10 @@
+[Unit]
+Description=Update Suricata IDS rules and live-reload engine
+Wants=network-online.target
+After=network-online.target suricata.service
+ConditionPathExists=/var/lib/suricata-ids/rules
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/suricata-update-rules.sh
+TimeoutStartSec=900

@@ -4,7 +4,7 @@
 
 vars:
   address-groups:
-    HOME_NET: "[10.0.0.0/8,172.16.0.0/12,192.168.0.0/16]"
+    HOME_NET: "[192.168.1.0/24,192.168.2.0/24]"
     EXTERNAL_NET: "!$HOME_NET"
     
     HTTP_SERVERS: "$HOME_NET"
@@ -39,7 +39,9 @@ default-rule-path: /etc/suricata/rules
 rule-files:
   - suricata.rules
   - local.rules
-  - urlhaus.rules
+  # urlhaus.rules removed 2026-11-17: 67MB stale feed (last refreshed Nov 15,
+  # not covered by the auto-updater) duplicating ET-open malware coverage.
+  # Re-add only with a maintained feed source.
 
 nfq:
   mode: accept
