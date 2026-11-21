@@ -18,6 +18,10 @@ services:
   suricata-cf-block:
     image: docker.io/jasonish/suricata:latest
     container_name: suricata-cf-block
+    # Host resolv.conf is rewritten by warp-svc to 127.0.2.x. Rootless
+    # aardvark-dns cannot reach that upstream, so container DNS dies.
+    # Host networking keeps the host resolver (warp DoH) reachable.
+    network_mode: host
     security_opt:
       - label=disable
     volumes:
