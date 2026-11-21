@@ -22,8 +22,8 @@ network threat detection engine by the [OISF](https://oisf.net) — packaged as
 **rootful Podman containers** managed by systemd quadlets, plus a rootless
 Cloudflare integration that turns detections into Gateway-level IP blocks.
 
-## Architecture
-[HLD](https://github.com/kbongcawel-viatrm/suricata-containerized-rootful/blob/main/architecture.html)
+## Architecture [HLD](https://github.com/kbongcawel-viatrm/suricata-containerized-rootful/blob/main/architecture.html)
+
 ```
                         ┌─────────────────────────────┐
                         │   ISP modem / router        │
