@@ -1,3 +1,4 @@
+
 <div align="center">
 
 <img src="docs/assets/suricata-logo.png" alt="Suricata" width="420" />
@@ -205,7 +206,12 @@ Licensed under [GPLv2](LICENSE).
 ---
 
 <div align="center">
+<div>Co-developed by: </div>
 
-**Built with [Devin](https://devin.ai)** — AI software engineer by Cognition
-
+<div>
+<img width="100" height="100" alt="devin-color" src="https://github.com/user-attachments/assets/fa60fbea-977f-45d3-beb5-7e494c413b4b" />
+</div>
+<div>
+Built with https://devin.ai  — AI software engineer by Cognition
+</div>
 </div>
