@@ -4,7 +4,7 @@
 
 vars:
   address-groups:
-    HOME_NET: "[192.168.1.0/24,192.168.2.0/24]"
+    HOME_NET: "[192.168.1.0/24]"
     EXTERNAL_NET: "!$HOME_NET"
     
     HTTP_SERVERS: "$HOME_NET"
@@ -45,6 +45,16 @@ rule-files:
 
 nfq:
   mode: accept
+
+af-packet:
+  - interface: enp0s20f0u10
+    threads: auto
+    cluster-id: 99
+    cluster-type: cluster_flow
+    defrag: yes
+    use-mmap: yes
+    tpacket-v3: yes
+    copy-mode: none
 
 default-log-dir: /var/log/suricata
 

@@ -1,24 +1,25 @@
 [Unit]
-Description=Suricata Host IDS NFQUEUE
+Description=Suricata AF_PACKET Intrusion Detection System
 Wants=network-online.target
-After=network-online.target firewalld.service
+After=network-online.target
 
 [Container]
-ContainerName=suricata
+ContainerName=suricata-ids
 Image=docker.io/jasonish/suricata:latest
-
 Network=host
 
 AddCapability=NET_ADMIN
 AddCapability=NET_RAW
-
 NoNewPrivileges=true
 
 Volume=/var/lib/suricata-ids/config:/etc/suricata/custom:ro,Z
 Volume=/var/lib/suricata-ids/rules:/etc/suricata/rules:ro,Z
-Volume=suricata-logs.volume:/var/log/suricata
+Volume=suricata-ids-logs.volume:/var/log/suricata
 
-Exec=-c /etc/suricata/custom/suricata.yaml -q 0 -l /var/log/suricata
+Memory=2g
+PodmanArgs=--cpus=1.5 --memory-reservation=768m --memory-swap=2g
+
+Exec=-c /etc/suricata/custom/suricata.yaml --af-packet -l /var/log/suricata
 
 [Service]
 Restart=always
@@ -26,4 +27,3 @@ RestartSec=5
 
 [Install]
 WantedBy=multi-user.target
-

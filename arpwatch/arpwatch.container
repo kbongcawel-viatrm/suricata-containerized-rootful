@@ -1,0 +1,25 @@
+[Unit]
+Description=arpwatch ARP spoofing monitor on mirrored port
+Wants=network-online.target
+After=network-online.target
+
+[Container]
+ContainerName=arpwatch
+Image=localhost/arpwatch:latest
+Network=host
+
+AddCapability=NET_ADMIN
+AddCapability=NET_RAW
+NoNewPrivileges=true
+
+Volume=/var/lib/arpwatch-data:/var/lib/arpwatch
+Volume=/dev/log:/dev/log
+
+Exec=-d -f /var/lib/arpwatch/arp.dat -i enp0s20f0u10
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

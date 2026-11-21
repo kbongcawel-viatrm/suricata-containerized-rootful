@@ -4,7 +4,7 @@
 
 ### Observe. Protect. Adapt.
 
-**Suricata IDS running rootful in a Podman container, fed by netfilter NFQUEUE**
+**Suricata IDS & IPS running rootful in a Podman container, fed by netfilter NFQUEUE**
 
 [![Suricata](https://img.shields.io/badge/Suricata-IDS%2FIPS-orange?style=flat-square)](https://suricata.io)
 [![Rootful](https://img.shields.io/badge/Runtime-Rootful%20Podman-282828?style=flat-square)](etc/containers/systemd/suricata.container)
@@ -33,17 +33,20 @@ Suricata through **NFQUEUE** rules (nftables or firewalld), and alerts are emitt
 
 ```
 .
-├── etc/containers/systemd/
-│   └── suricata.container      # Podman quadlet (systemd unit)
-├── rules/
-│   ├── suricata.rules          # Emerging Threats Open ruleset
-│   ├── urlhaus.rules           # URLhaus malware URL rules
+├── suricata_containers
+│   ├── suricata.container      # suricata Host level IPS (Quadlet)
+│   └── suricata-ids.containe   # suricata-ids Network level IDS (Quadlet)
+├── suricata_rules/
+│   ├── suricata_rules          # Emerging Threats Open ruleset
 │   └── local.rules             # Site-specific rules
 ├── scripts/
 │   ├── nftables-add.sh         #   NFQUEUE rules via nftables
 │   ├── nftables-remove.sh      #   Remove nftables table
 │   └── firewalld-nfqueue-add.sh#   NFQUEUE rules via firewalld --direct
-├── suricata.yaml               # Main Suricata configuration
+├── suricata_yaml
+│   └── suricata.yaml           # Main Suricata configuration for both:
+                                # suricata (enp1s0) Host level IPS mod
+                                # suricata-id (enp0s20f0u10): Network level IDS mode
 └── docs/assets/
     └── suricata-logo.png       # OISF trademarked logo (branding use)
 ```

@@ -1,0 +1,36 @@
+# suricata-cf-block - rootless podman compose service
+#
+# Tails Suricata eve.json logs and pushes flagged public IPs to a
+# Cloudflare account List.
+#
+# Run as kim (rootless):
+#   cd /var/home/workspace/suricata-containerized-rootful
+#   podman compose up -d
+#
+# Prerequisites:
+#   - /var/lib/suricata-cf-block/cf.env with CF_API_TOKEN (kim-owned, mode 600)
+#   - /var/lib/suricata-cf-block writable by kim (state file)
+#   - kim has traverse ACLs on the suricata log volume dirs
+#     (setfacl -m u:kim:--x /var/lib/containers/storage/volumes{,/suricata-logs,/suricata-ids-logs})
+#   - /usr/local/sbin/suricata-cf-block.py present and readable
+
+services:
+  suricata-cf-block:
+    image: docker.io/jasonish/suricata:latest
+    container_name: suricata-cf-block
+    security_opt:
+      - label=disable
+    volumes:
+      - /usr/local/sbin/suricata-cf-block.py:/opt/suricata-cf-block.py:ro
+      - /var/lib/suricata-cf-block/cf.env:/etc/suricata-cf/cf.env:ro
+      - /var/lib/suricata-cf-block:/var/lib/suricata-cf-block
+      - /var/lib/containers/storage/volumes/suricata-logs/_data:/logs/suricata-logs:ro
+      - /var/lib/containers/storage/volumes/suricata-ids-logs/_data:/logs/suricata-ids-logs:ro
+    environment:
+      IPS_EVE: /logs/suricata-logs/eve.json
+      IDS_EVE: /logs/suricata-ids-logs/eve.json
+      STATE_FILE: /var/lib/suricata-cf-block/cf-block-state.json
+    entrypoint: /bin/sh
+    command: >-
+      -c "set -a; . /etc/suricata-cf/cf.env; set +a; exec python3 /opt/suricata-cf-block.py"
+    restart: always

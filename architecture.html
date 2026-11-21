@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suricata Architecture — home-security</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #1a2129; --border: #2d3743;
+    --text: #e2e8f0; --dim: #94a3b8; --accent: #38bdf8;
+    --ips: #f59e0b; --ids: #34d399; --cf: #a78bfa; --warn: #f87171;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.55 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 32px 20px 64px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 36px 0 12px; color: var(--accent);
+       border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+  h3 { font-size: 16px; margin: 20px 0 8px; }
+  .sub { color: var(--dim); margin-bottom: 24px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px,1fr)); gap: 16px; }
+  .card { background: var(--panel); border: 1px solid var(--border);
+          border-radius: 10px; padding: 16px 18px; }
+  .card h3 { margin-top: 0; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700;
+         padding: 2px 8px; border-radius: 99px; vertical-align: middle; }
+  .tag.ips { background: #78350f; color: var(--ips); }
+  .tag.ids { background: #064e3b; color: var(--ids); }
+  .tag.cf  { background: #4c1d95; color: var(--cf); }
+  code, pre { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 13px; }
+  code { background: #0b1220; padding: 1px 6px; border-radius: 4px; color: #7dd3fc; }
+  pre { background: #0b1220; border: 1px solid var(--border); border-radius: 8px;
+        padding: 12px 14px; overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+  th { color: var(--dim); font-weight: 600; }
+  .warn { color: var(--warn); }
+  .ok { color: var(--ids); }
+  .diagram { background: var(--panel); border: 1px solid var(--border);
+             border-radius: 10px; padding: 12px; overflow-x: auto; }
+  ul { margin: 6px 0; padding-left: 20px; }
+  li { margin: 3px 0; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Suricata Security Stack</h1>
+<p class="sub">home-security &middot; deployed 2026-11-21 &middot; Suricata 8.0.8 (jasonish/suricata) &middot; ET Open ruleset</p>
+
+<h2>Network diagram</h2>
+<div class="diagram">
+<svg viewBox="0 0 1060 560" width="100%" xmlns="http://www.w3.org/2000/svg" font-family="inherit">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#64748b"/>
+    </marker>
+    <marker id="arrowB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#38bdf8"/>
+    </marker>
+    <marker id="arrowG" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#34d399"/>
+    </marker>
+  </defs>
+
+  <!-- WAN -->
+  <rect x="20" y="230" width="130" height="60" rx="8" fill="#1e293b" stroke="#475569"/>
+  <text x="85" y="255" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">ISP</text>
+  <text x="85" y="274" text-anchor="middle" fill="#94a3b8" font-size="12">Modem / Router</text>
+  <text x="85" y="289" text-anchor="middle" fill="#64748b" font-size="11">192.168.1.1</text>
+
+  <!-- Switch -->
+  <rect x="210" y="60" width="180" height="420" rx="10" fill="#1e293b" stroke="#475569"/>
+  <text x="300" y="85" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">TL-SG105E Switch</text>
+  <rect x="230" y="110" width="140" height="34" rx="5" fill="#0f172a" stroke="#334155"/>
+  <text x="300" y="132" text-anchor="middle" fill="#94a3b8" font-size="12">P1: Router/uplink</text>
+  <rect x="230" y="160" width="140" height="34" rx="5" fill="#0f172a" stroke="#334155"/>
+  <text x="300" y="182" text-anchor="middle" fill="#94a3b8" font-size="12">P2: AP (bridge) — mirror src</text>
+  <rect x="230" y="210" width="140" height="34" rx="5" fill="#0f172a" stroke="#f59e0b"/>
+  <text x="300" y="232" text-anchor="middle" fill="#f59e0b" font-size="12" font-weight="600">P3: Monitor — mirror dst</text>
+  <rect x="230" y="270" width="140" height="34" rx="5" fill="#0f172a" stroke="#334155"/>
+  <text x="300" y="292" text-anchor="middle" fill="#94a3b8" font-size="12">P4–P5: wired clients</text>
+  <rect x="230" y="320" width="140" height="60" rx="5" fill="#0f172a" stroke="#334155"/>
+  <text x="300" y="344" text-anchor="middle" fill="#94a3b8" font-size="11">Mirror: all ports → P3</text>
+  <text x="300" y="362" text-anchor="middle" fill="#64748b" font-size="11">RX+TX direction</text>
+
+  <!-- AP -->
+  <rect x="450" y="160" width="140" height="60" rx="8" fill="#1e293b" stroke="#475569"/>
+  <text x="520" y="185" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">Access Point</text>
+  <text x="520" y="204" text-anchor="middle" fill="#94a3b8" font-size="12">bridge mode</text>
+
+  <!-- Clients -->
+  <rect x="660" y="60" width="160" height="52" rx="8" fill="#1e293b" stroke="#475569"/>
+  <text x="740" y="82" text-anchor="middle" fill="#e2e8f0" font-size="13">Wireless / LAN clients</text>
+  <text x="740" y="100" text-anchor="middle" fill="#94a3b8" font-size="11">192.168.1.0/24</text>
+
+  <!-- Suricata host -->
+  <rect x="660" y="180" width="380" height="330" rx="12" fill="#131c26" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="850" y="208" text-anchor="middle" fill="#38bdf8" font-size="15" font-weight="700">Suricata Host (this machine)</text>
+  <text x="850" y="226" text-anchor="middle" fill="#64748b" font-size="11">Fedora Atomic / SecureBlue</text>
+
+  <!-- enp1s0 + IPS -->
+  <rect x="680" y="245" width="160" height="52" rx="8" fill="#1e293b" stroke="#f59e0b"/>
+  <text x="760" y="267" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">enp1s0</text>
+  <text x="760" y="285" text-anchor="middle" fill="#94a3b8" font-size="11">192.168.1.200 → AP</text>
+
+  <rect x="860" y="240" width="160" height="120" rx="8" fill="#1c1917" stroke="#f59e0b"/>
+  <text x="940" y="262" text-anchor="middle" fill="#f59e0b" font-size="13" font-weight="700">suricata (IPS)</text>
+  <text x="940" y="280" text-anchor="middle" fill="#d6d3d1" font-size="11">NFQUEUE queue 0</text>
+  <text x="940" y="296" text-anchor="middle" fill="#d6d3d1" font-size="11">iptables IN+OUT, enp1s0</text>
+  <text x="940" y="312" text-anchor="middle" fill="#34d399" font-size="11">CAN DROP packets</text>
+  <text x="940" y="328" text-anchor="middle" fill="#64748b" font-size="10">coverage: this host only</text>
+  <text x="940" y="344" text-anchor="middle" fill="#64748b" font-size="10">rootful quadlet · -q 0</text>
+
+  <!-- enp0s20f0u10 + IDS -->
+  <rect x="680" y="330" width="160" height="52" rx="8" fill="#1e293b" stroke="#34d399"/>
+  <text x="760" y="352" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">enp0s20f0u10</text>
+  <text x="760" y="370" text-anchor="middle" fill="#94a3b8" font-size="11">USB NIC → switch P3</text>
+
+  <rect x="860" y="325" width="160" height="120" rx="8" fill="#052e1b" stroke="#34d399"/>
+  <text x="940" y="347" text-anchor="middle" fill="#34d399" font-size="13" font-weight="700">suricata-ids (IDS)</text>
+  <text x="940" y="365" text-anchor="middle" fill="#d1fae5" font-size="11">AF_PACKET, copy-mode:none</text>
+  <text x="940" y="381" text-anchor="middle" fill="#d1fae5" font-size="11">passive mirror capture</text>
+  <text x="940" y="397" text-anchor="middle" fill="#f87171" font-size="11">ALERT-ONLY (can't drop)</text>
+  <text x="940" y="413" text-anchor="middle" fill="#64748b" font-size="10">coverage: whole LAN</text>
+  <text x="940" y="429" text-anchor="middle" fill="#64748b" font-size="10">rootful quadlet · --af-packet</text>
+
+  <!-- Logs -->
+  <rect x="680" y="420" width="340" height="70" rx="8" fill="#1e293b" stroke="#475569"/>
+  <text x="850" y="444" text-anchor="middle" fill="#e2e8f0" font-size="12" font-weight="600">eve.json logs (podman volumes)</text>
+  <text x="850" y="462" text-anchor="middle" fill="#94a3b8" font-size="11">suricata-logs · suricata-ids-logs</text>
+  <text x="850" y="478" text-anchor="middle" fill="#64748b" font-size="10">JSON Lines · alerts, flows, dns, http, tls, stats</text>
+
+  <!-- CF blocker -->
+  <rect x="450" y="420" width="200" height="70" rx="8" fill="#1e1b4b" stroke="#a78bfa"/>
+  <text x="550" y="446" text-anchor="middle" fill="#a78bfa" font-size="13" font-weight="700">suricata-cf-block</text>
+  <text x="550" y="464" text-anchor="middle" fill="#ddd6fe" font-size="11">rootless podman (kim)</text>
+  <text x="550" y="480" text-anchor="middle" fill="#ddd6fe" font-size="11">tails eve.json → CF List</text>
+
+  <!-- Cloudflare -->
+  <rect x="20" y="420" width="160" height="70" rx="8" fill="#1e1b4b" stroke="#a78bfa"/>
+  <text x="100" y="446" text-anchor="middle" fill="#a78bfa" font-size="13" font-weight="600">Cloudflare</text>
+  <text x="100" y="464" text-anchor="middle" fill="#ddd6fe" font-size="11">"suricata-blocked"</text>
+  <text x="100" y="480" text-anchor="middle" fill="#ddd6fe" font-size="11">account IP List</text>
+
+  <!-- Links -->
+  <line x1="150" y1="260" x2="210" y2="260" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="390" y1="180" x2="450" y2="180" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="590" y1="190" x2="660" y2="120" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <line x1="590" y1="205" x2="660" y2="271" stroke="#64748b" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="615" y="150" fill="#64748b" font-size="10">all traffic</text>
+  <text x="620" y="240" fill="#64748b" font-size="10">host traffic</text>
+
+  <!-- mirror link switch P3 -> enp0s20f0u10 -->
+  <path d="M 370 227 L 430 227 L 430 356 L 660 356" fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6,4" marker-end="url(#arrow)"/>
+  <text x="520" y="215" fill="#f59e0b" font-size="11" font-weight="600">SPAN mirror (copy only)</text>
+
+  <!-- enp1s0 -> IPS -->
+  <line x1="840" y1="271" x2="860" y2="285" stroke="#f59e0b" stroke-width="2.5" marker-end="url(#arrow)"/>
+  <!-- enp0s20f0u10 -> IDS -->
+  <line x1="840" y1="356" x2="860" y2="370" stroke="#34d399" stroke-width="2.5" marker-end="url(#arrow)"/>
+
+  <!-- IPS -> logs -->
+  <line x1="940" y1="360" x2="940" y2="420" stroke="#f59e0b" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- IDS -> logs -->
+  <line x1="900" y1="445" x2="900" y2="445" stroke="none"/>
+  <line x1="860" y1="445" x2="680" y2="445" stroke="#34d399" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- logs -> cf-block -->
+  <line x1="680" y1="455" x2="650" y2="455" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <!-- cf-block -> cloudflare -->
+  <line x1="450" y1="455" x2="180" y2="455" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow)"/>
+</svg>
+</div>
+
+<h2>The two Suricata instances</h2>
+<div class="grid">
+  <div class="card">
+    <h3><span class="tag ips">IPS</span> &nbsp;suricata.service</h3>
+    <table>
+      <tr><th>Position</th><td>Host level — inline on this machine's traffic</td></tr>
+      <tr><th>Interface</th><td><code>enp1s0</code> (192.168.1.200)</td></tr>
+      <tr><th>Capture</th><td>NFQUEUE queue 0 via firewalld direct rules (INPUT + OUTPUT, IPv4 + IPv6)</td></tr>
+      <tr><th>Launch</th><td><code>suricata -q 0</code> · rootful quadlet <code>/etc/containers/systemd/suricata.container</code></td></tr>
+      <tr><th>Blocking</th><td class="ok">Yes — drop verdicts discard packets</td></tr>
+      <tr><th>Coverage</th><td>This host only — LAN transit traffic never reaches it</td></tr>
+      <tr><th>Persistence</th><td>iptables rules permanent in firewalld; verified with live drop test (1.1.1.1:443)</td></tr>
+    </table>
+  </div>
+  <div class="card">
+    <h3><span class="tag ids">IDS</span> &nbsp;suricata-ids.service</h3>
+    <table>
+      <tr><th>Position</th><td>Network level — passive tap on the switch mirror</td></tr>
+      <tr><th>Interface</th><td><code>enp0s20f0u10</code> (USB NIC → TL-SG105E port 3)</td></tr>
+      <tr><th>Capture</th><td>AF_PACKET <code>copy-mode: none</code> — receives a copy of every frame</td></tr>
+      <tr><th>Launch</th><td><code>suricata --af-packet</code> · rootful quadlet <code>/etc/containers/systemd/suricata-ids.container</code></td></tr>
+      <tr><th>Blocking</th><td class="warn">No — mirror port is receive-only; alert-only</td></tr>
+      <tr><th>Coverage</th><td>Entire LAN — wired + wireless, LAN-to-LAN + internet</td></tr>
+      <tr><th>Persistence</th><td>Mirror session on TL-SG105E: all ports → port 3, RX+TX</td></tr>
+    </table>
+  </div>
+</div>
+
+<h2>Detection pipeline</h2>
+<div class="card">
+  <ul>
+    <li><b>Rules:</b> Emerging Threats Open via <code>suricata-update</code> — 69,570 fetched, ~53,590 enabled. Daily timer <code>suricata-update-rules.timer</code> (03:30) regenerates rules, config-tests, then restarts <b>both</b> engines.</li>
+    <li><b>FP tuning:</b> <code>/var/lib/suricata-ids/config/disable.conf</code> disables noisy rules (ethertype-unknown mirror noise, ICMP ping spam, TP-Link admin UI false hits). <code>drop.conf</code> converts trojan-activity / command-and-control classtypes to <code>drop</code> actions (~19k rules).</li>
+    <li><b>Shared config:</b> both containers mount <code>/var/lib/suricata-ids/{config,rules}</code> read-only and use the same <code>suricata.yaml</code> (HOME_NET = 192.168.1.0/24).</li>
+    <li><b>Local rules:</b> <code>local.rules</code> adds host-specific alerts (ICMP, SSH, Telnet, RDP, SMB, DNS).</li>
+  </ul>
+</div>
+
+<h2>Logging</h2>
+<div class="card">
+  <table>
+    <tr><th>Container</th><th>Volume</th><th>Host path</th></tr>
+    <tr><td>suricata (IPS)</td><td><code>suricata-logs</code></td><td><code>/var/lib/containers/storage/volumes/suricata-logs/_data/</code></td></tr>
+    <tr><td>suricata-ids</td><td><code>suricata-ids-logs</code></td><td><code>/var/lib/containers/storage/volumes/suricata-ids-logs/_data/</code></td></tr>
+  </table>
+  <p>Each contains <code>eve.json</code> (JSON Lines: alerts, flows, dns, http, tls, stats), <code>fast.log</code>, <code>suricata.log</code>. Readable by <code>kim</code> via traverse ACLs.</p>
+  <pre># live alerts
+ tail -f /var/lib/containers/storage/volumes/suricata-ids-logs/_data/eve.json \
+   | grep '"event_type":"alert"' | jq -r '"\(.timestamp) \(.src_ip) -> \(.dest_ip) | \(.alert.signature)"'</pre>
+</div>
+
+<h2>Cloudflare auto-blocker (planned)</h2>
+<div class="card">
+  <h3><span class="tag cf">CF</span> &nbsp;suricata-cf-block</h3>
+  <ul>
+    <li>Rootless podman container managed by <code>podman compose</code> — manifest: <code>/var/home/workspace/suricata-containerized-rootful/compose.yaml</code> (also mirrored in this repo as <code>suricata-cf-compose.yaml</code>).</li>
+    <li>Script: <code>/usr/local/sbin/suricata-cf-block.py</code> — tails both <code>eve.json</code> files.</li>
+    <li><b>Flags:</b> IPS alerts with <code>action:"blocked"</code>; IDS alerts in high-confidence categories (trojan-activity, command-and-control, domain-c2).</li>
+    <li>Public IPs only (RFC1918/CGNAT/loopback skipped), deduped, batched to a Cloudflare account List <code>suricata-blocked</code> via API.</li>
+    <li><b>Status:</b> awaiting <code>CF_API_TOKEN</code> in <code>/var/lib/suricata-cf-block/cf.env</code>. List alone doesn't enforce — needs a Gateway/WAF policy referencing it.</li>
+  </ul>
+</div>
+
+<h2>Operational notes</h2>
+<div class="card">
+  <ul>
+    <li><span class="warn">Mirror ≠ IPS:</span> the AF_PACKET instance can never drop traffic — prevention for the whole LAN requires an inline bridge or on-path device.</li>
+    <li><span class="warn">NFQUEUE = this host only:</span> other LAN hosts' traffic isn't inspected by the IPS.</li>
+    <li>Both engines run with fail-open behavior — Suricata outages don't take the network down.</li>
+    <li>Realtek USB NIC emits loopback-test frames that appear on the mirror — disabled rule 2200121 filters the resulting noise.</li>
+    <li>Rule reload requires container restart (no suricatasc command socket); daily timer handles this automatically.</li>
+  </ul>
+</div>
+
+</main>
+</body>
+</html>
