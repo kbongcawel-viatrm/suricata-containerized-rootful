@@ -34,7 +34,7 @@ Cloudflare integration that turns detections into Gateway-level IP blocks.
    ┌──────────────────────────────────────────────────────────┐
    │  TL-SG105E switch (mirror port)                           │
    │                                                          │
-   │   enp0s20f0u10 ──► suricata-ids (AF_PACKET, passive IDS)  │
+   │   NIC2 ──► suricata-ids (AF_PACKET, passive IDS)  │
    │                                                          │
    │   arpwatch ──► L2 ARP/MAC anomaly alerts (journald)      │
    └──────────────────────────────────────────────────────────┘
@@ -42,7 +42,7 @@ Cloudflare integration that turns detections into Gateway-level IP blocks.
    ┌────────────────────────────┴─────────────────────────────┐
    │  THIS HOST                                                │
    │                                                           │
-   │   enp1s0 ──► nftables/firewalld ──NFQUEUE──► suricata    │
+   │   NIC1 ──► nftables/firewalld ──NFQUEUE──► suricata    │
    │   (IPS, inline drop)              (IPS mode)              │
    │                                                           │
    │   warp-cli (include-mode) ──► Cloudflare Zero Trust      │
@@ -60,9 +60,9 @@ Cloudflare integration that turns detections into Gateway-level IP blocks.
 
 | Component | Mode | Role |
 |---|---|---|
-| `suricata` | Rootful quadlet, NFQUEUE on `enp1s0` | **Inline IPS** — drops malicious traffic to/from this host |
-| `suricata-ids` | Rootful quadlet, AF_PACKET on `enp0s20f0u10` | **Passive IDS** — whole-LAN visibility via switch mirror port (alert-only; cannot block) |
-| `arpwatch` | Rootful quadlet, AF_PACKET on `enp0s20f0u10` | **L2 monitor** — ARP spoofing / MAC-change alerts to journald |
+| `suricata` | Rootful quadlet, NFQUEUE on `NIC1` | **Inline IPS** — drops malicious traffic to/from this host |
+| `suricata-ids` | Rootful quadlet, AF_PACKET on `NIC2` | **Passive IDS** — whole-LAN visibility via switch mirror port (alert-only; cannot block) |
+| `arpwatch` | Rootful quadlet, AF_PACKET on `NIC2` | **L2 monitor** — ARP spoofing / MAC-change alerts to journald |
 | `suricata-cf-block` | Rootless compose (`suricata-cf-compose.yaml`) | **Enrichment** — tails EVE JSON, submits public IPs to Cloudflare |
 | `warp-cli` | Host package (rpm-ostree layer) | **Tunnel** — include-mode split tunnel into Zero Trust Gateway |
 
@@ -100,8 +100,8 @@ Cloudflare integration that turns detections into Gateway-level IP blocks.
 ├── architecture.html               # Self-contained visual architecture doc
 ├── suricata-cf-compose.yaml        # Rootless compose for suricata-cf-block
 ├── suricata_container/
-│   ├── suricata.container          # IPS quadlet (NFQUEUE, enp1s0)
-│   └── suricata-ids.container      # IDS quadlet (AF_PACKET, enp0s20f0u10)
+│   ├── suricata.container          # IPS quadlet (NFQUEUE, NIC1)
+│   └── suricata-ids.container      # IDS quadlet (AF_PACKET, NIC2)
 ├── suricata-automated-updates/     # suricata-update rules timer + script
 ├── suricata_cloudflare/
 │   └── blocking/
